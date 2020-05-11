@@ -1,6 +1,11 @@
 # sklearn-cv-pandas
 RandomizedSearchCV/GridSearchCV with pandas.DataFrame interface
 
+## Installation
+```
+pip install sklearn_cv_pandas
+```
+
 ## Usage
 
 To tune hyper parameters, instantiate CV as the same as original ones, and use methods `fit_sv_pandas` or `fit_cv_pandas`

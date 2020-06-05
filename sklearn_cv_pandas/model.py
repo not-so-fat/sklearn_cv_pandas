@@ -21,7 +21,7 @@ class Model(object):
         self.estimator = estimator
         self.feature_columns = feature_columns
         self.target_column = target_column
-        self.model = estimator.steps[-1][1] if hasattr(estimator, "steps") else estimator
+        self.model = get_ml_model_from_pipeline(get_estimator_from_cvobj(estimator))
         self.is_cl = hasattr(estimator, "predict_proba")
 
     def predict(self, df):
@@ -85,3 +85,11 @@ def get_feature_importance_sklearn(model, feature_columns):
     }).sort_values(by="importance", ascending=False)
     fi_df["rank"] = range(len(fi_df))
     return fi_df
+
+
+def get_estimator_from_cvobj(estimator):
+    return estimator.best_estimator_ if hasattr(estimator, "best_estimator_") else estimator
+
+
+def get_ml_model_from_pipeline(estimator):
+    return estimator.steps[-1][1] if hasattr(estimator, "steps") else estimator

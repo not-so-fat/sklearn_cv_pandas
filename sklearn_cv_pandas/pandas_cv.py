@@ -15,14 +15,13 @@ class RandomizedSearchCV(model_selection.RandomizedSearchCV):
     """
     sklearn.model_selection.RandomizedSearchCV with pandas DataFrame interface
     """
-    def __init__(self, estimator, param_distribution, scoring, **kwargs):
+    def __init__(self, *args, **kwargs):
         """
         The same manner as [sklearn.model_selection.RandomizedSearchCV](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.RandomizedSearchCV.html)
         """
         kwargs["return_train_score"] = True
         kwargs["verbose"] = 10
-        super(RandomizedSearchCV, self).__init__(estimator, param_distribution, scoring=scoring, **kwargs)
-        self.pandas_model_class = model.Model
+        super(RandomizedSearchCV, self).__init__(*args, **kwargs)
 
     def fit_sv_pandas(self, df_training, target_column, feature_columns,
                       df_validation=None, ratio_training=None, **kwargs):
@@ -45,8 +44,7 @@ class RandomizedSearchCV(model_selection.RandomizedSearchCV):
             numpy.array([-1] * num_training + [0] * num_validation))
         logger.warning("start learning with {} hyper parameters".format(self.n_iter))
         self.fit(x, y, **kwargs)
-        return self.pandas_model_class(
-            self, feature_columns=feature_columns, target_column=target_column)
+        return model.Model(self, feature_columns=feature_columns, target_column=target_column)
 
     def fit_cv_pandas(self, df, target_column, feature_columns, n_fold, **kwargs):
         """
@@ -67,16 +65,14 @@ class RandomizedSearchCV(model_selection.RandomizedSearchCV):
         self.cv = n_fold
         logger.warning("start learning with {} hyper parameters".format(self.n_iter))
         self.fit(x, y, **kwargs)
-        return self.pandas_model_class(
-            self, feature_columns=feature_columns, target_column=target_column)
+        return model.Model(self, feature_columns=feature_columns, target_column=target_column)
 
 
 class GridSearchCV(model_selection.GridSearchCV):
-    def __init__(self, estimator, param_grid, scoring, **kwargs):
+    def __init__(self, *args, **kwargs):
         kwargs["return_train_score"] = True
         kwargs["verbose"] = 10
-        super(GridSearchCV, self).__init__(estimator, param_grid, scoring=scoring, **kwargs)
-        self.pandas_model_class = model.Model
+        super(GridSearchCV, self).__init__(*args, **kwargs)
 
     def fit_sv_pandas(self, df_training, target_column, feature_columns,
                       df_validation=None, ratio_training=None, **kwargs):
@@ -99,8 +95,7 @@ class GridSearchCV(model_selection.GridSearchCV):
             numpy.array([-1] * num_training + [0] * num_validation))
         logger.warning("start learning with {} parameters".format(_get_num_parameters(self.param_grid)))
         self.fit(x, y, **kwargs)
-        return self.pandas_model_class(
-            self, feature_columns=feature_columns, target_column=target_column)
+        return model.Model(self, feature_columns=feature_columns, target_column=target_column)
 
     def fit_cv_pandas(self, df, target_column, feature_columns, n_fold, **kwargs):
         """
@@ -121,8 +116,7 @@ class GridSearchCV(model_selection.GridSearchCV):
         self.cv = n_fold
         logger.warning("start learning with {} parameters".format(_get_num_parameters(self.param_grid)))
         self.fit(x, y, **kwargs)
-        return self.pandas_model_class(
-            self, feature_columns=feature_columns, target_column=target_column)
+        return model.Model(self, feature_columns=feature_columns, target_column=target_column)
 
 
 def _split_for_sv(df_training, target_column, feature_columns, df_validation, ratio_training):

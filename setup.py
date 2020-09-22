@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="sklearn_cv_pandas",
-    version="0.0.2",
+    version="0.0.3",
     author="@not-so-fat",
     description="RandomizedSearchCV/GridSearchCV with pandas.DataFrame interface",
     long_description=long_description,

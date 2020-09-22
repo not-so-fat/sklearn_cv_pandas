@@ -52,10 +52,10 @@ class TestPandasCV(unittest.TestCase):
         metric = "roc_auc" if is_cl else "neg_root_mean_squared_error"
         if cv_type == "random":
             params = self._get_params_random(model_type, is_cl, with_prep)
-            return RandomizedSearchCV(estimator, params, metric)
+            return RandomizedSearchCV(estimator, params, scoring=metric)
         else:
             params = self._get_params_grid(model_type, is_cl, with_prep)
-            return GridSearchCV(estimator, params, metric)
+            return GridSearchCV(estimator, params, scoring=metric)
 
     def _get_estimator(self, model_type, is_cl, with_preprocessing):
         if model_type == "linear":

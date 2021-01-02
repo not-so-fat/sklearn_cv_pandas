@@ -8,7 +8,9 @@ pip install sklearn_cv_pandas
 
 ## Usage
 
-To tune hyper parameters, instantiate CV as the same as original ones, and use methods `fit_sv_pandas` or `fit_cv_pandas`
+### Configure CV object
+
+Instantiate CV in the same manner as original ones.
 ```
 from scipy import stats
 from sklearn import linear_model
@@ -17,12 +19,23 @@ from sklearn_cv_pandas import RandomizedSearchCV
 estimator = linear_model.Lasso()
 param_dist = dict(alpha=stats.loguniform(1e-5, 10))
 cv = RandomizedSearchCV(estimator, param_dist, scoring="mean_absolute_error")
+```
+
+### Fit with pandas.DataFrame
+
+Our CV object has new methods `fit_sv_pandas` and `fit_cv_pandas`.
+Original ones requires `x` and `y` as `numpy.array`.
+Instead of numpy array, you can specify one `pandas.DataFrame` 
+and column names for `x` (`feature_columns`), and column name of `y` (`target_column`).
+```
 model = cv.fit_cv_pandas(
     df, target_column="y", feature_columns=["x{}".format(i) for i in range(100)], n_fold=5
 )
 ```
 
-To make prediction, use method `predict` of the output of `fit_sv_pandas` or `fit_cv_pandas`
+You can run prediction with pandas.DataFrame interface as well.
+Output of `fit_sv_pandas` and `fit_cv_pandas` stores `feature_columns` and `target_column`.
+You can just input `pandas.DataFrame` for prediction into the method `predict`.
 
 ```
 model.predict(df)

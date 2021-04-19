@@ -21,7 +21,7 @@ param_dist = dict(alpha=stats.loguniform(1e-5, 10))
 cv = RandomizedSearchCV(estimator, param_dist, scoring="mean_absolute_error")
 ```
 
-### Fit with pandas.DataFrame
+### `fit` with pandas.DataFrame
 
 Our CV object has new methods `fit_sv_pandas` and `fit_cv_pandas`.
 Original ones requires `x` and `y` as `numpy.array`.
@@ -32,6 +32,8 @@ model = cv.fit_cv_pandas(
     df, target_column="y", feature_columns=["x{}".format(i) for i in range(100)], n_fold=5
 )
 ```
+
+### `predict` with pandas.DataFrame
 
 You can run prediction with pandas.DataFrame interface as well.
 Output of `fit_sv_pandas` and `fit_cv_pandas` stores `feature_columns` and `target_column`.

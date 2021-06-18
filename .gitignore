@@ -3,4 +3,6 @@ venv
 __pycache__
 build
 dist
+Dockerfile
+build_pydev.bat
 *.egg-info

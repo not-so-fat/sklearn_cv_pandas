@@ -1,9 +1,10 @@
+import numpy
 from numpy import random
 import pandas
 
 
-def get_input_df(sample_size):
-    return pandas.DataFrame({
+def get_input_df(sample_size, with_missing):
+    df = pandas.DataFrame({
         **{
             "id1": range(sample_size),
             "id2": range(10000, 10000+sample_size),
@@ -19,10 +20,9 @@ def get_input_df(sample_size):
             for i in range(3, 6)
         }
     })
-
-
-def get_xy(sample_size, for_cl):
-    input_df = get_input_df(sample_size)
-    feature_columns = ["column{}".format(i) for i in range(6)]
-    target_column = "target_cl" if for_cl else "target_rg"
-    return input_df[feature_columns].values, input_df[target_column].values
+    if with_missing:
+        df["column0"].iloc[5] = numpy.nan
+        df["column3"].iloc[5] = numpy.nan
+    for i in range(3, 6):
+        df["column{}".format(i)] = df["column{}".format(i)].astype("Int64")
+    return df

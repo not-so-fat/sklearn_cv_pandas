@@ -5,7 +5,10 @@ from operator import mul
 import numpy
 from sklearn import model_selection
 
-from . import model
+from . import (
+    model,
+    preprocessing
+)
 
 
 logger = logging.getLogger(__name__)
@@ -27,10 +30,10 @@ class RandomizedSearchCV(model_selection.RandomizedSearchCV):
             return_train_score=return_train_score
         )
 
-    def fit_sv_pandas(self, df_training, target_column, feature_columns,
+    def fit_holdout_pandas(self, df_training, target_column, feature_columns,
                       df_validation=None, ratio_training=None, **kwargs):
         """
-        `fit` for pandas DataFrame to perform single validation
+        `fit` for pandas DataFrame to perform one set of holdout validation
         Args:
             df_training (pandas.DataFrame): training data set
             target_column (str): column name of prediction target
@@ -42,7 +45,7 @@ class RandomizedSearchCV(model_selection.RandomizedSearchCV):
         Returns:
             conjurer.ml.Model
         """
-        x, y, num_training, num_validation = _split_for_sv(
+        x, y, num_training, num_validation = _split_for_holdout(
             df_training, target_column, feature_columns, df_validation, ratio_training)
         self.cv = model_selection.PredefinedSplit(
             numpy.array([-1] * num_training + [0] * num_validation))
@@ -64,8 +67,8 @@ class RandomizedSearchCV(model_selection.RandomizedSearchCV):
             conjurer.ml.Model
         """
         df = df.sample(len(df))  # shuffle
-        x = df[feature_columns].values
-        y = df[target_column].values
+        x = preprocessing.get_x(df, feature_columns)
+        y = preprocessing.get_y(df, target_column)
         self.cv = n_fold
         logger.warning("start learning with {} hyper parameters".format(self.n_iter))
         self.fit(x, y, **kwargs)
@@ -81,10 +84,10 @@ class GridSearchCV(model_selection.GridSearchCV):
             cv=cv, refit=refit, verbose=verbose, error_score=error_score, return_train_score=return_train_score
         )
 
-    def fit_sv_pandas(self, df_training, target_column, feature_columns,
+    def fit_holdout_pandas(self, df_training, target_column, feature_columns,
                       df_validation=None, ratio_training=None, **kwargs):
         """
-        `fit` for pandas DataFrame to perform single validation
+        `fit` for pandas DataFrame to perform one set of holdout validation
         Args:
             df_training (pandas.DataFrame): training data set
             target_column (str): column name of prediction target
@@ -96,7 +99,7 @@ class GridSearchCV(model_selection.GridSearchCV):
         Returns:
             conjurer.ml.Model
         """
-        x, y, num_training, num_validation = _split_for_sv(
+        x, y, num_training, num_validation = _split_for_holdout(
             df_training, target_column, feature_columns, df_validation, ratio_training)
         self.cv = model_selection.PredefinedSplit(
             numpy.array([-1] * num_training + [0] * num_validation))
@@ -118,30 +121,36 @@ class GridSearchCV(model_selection.GridSearchCV):
             conjurer.ml.Model
         """
         df = df.sample(len(df))  # shuffle
-        x = df[feature_columns].values
-        y = df[target_column].values
+        x = preprocessing.get_x(df, feature_columns)
+        y = preprocessing.get_y(df, target_column)
         self.cv = n_fold
         logger.warning("start learning with {} parameters".format(_get_num_parameters(self.param_grid)))
         self.fit(x, y, **kwargs)
         return model.Model(self, feature_columns=feature_columns, target_column=target_column)
 
 
-def _split_for_sv(df_training, target_column, feature_columns, df_validation, ratio_training):
+def _split_for_holdout(df_training, target_column, feature_columns, df_validation, ratio_training):
     if df_validation is not None:
         x = numpy.concatenate(
-            (df_training[feature_columns].values, df_validation[feature_columns].values),
+            (
+                preprocessing.get_x(df_training, feature_columns), 
+                preprocessing.get_x(df_validation, feature_columns)
+            ),
             axis=0
         )
         y = numpy.concatenate(
-            (df_training[target_column].values, df_validation[target_column].values),
+            (
+                preprocessing.get_y(df_training, target_column), 
+                preprocessing.get_y(df_validation, target_column)
+            ),
             axis=0
         )
         num_training = len(df_training)
         num_validation = len(df_validation)
     else:
         shuffled_df = df_training.sample(len(df_training))
-        x = shuffled_df[feature_columns].values
-        y = shuffled_df[target_column].values
+        x = preprocessing.get_x(shuffled_df, feature_columns)
+        y = preprocessing.get_y(shuffled_df, target_column)
         num_training = int(ratio_training * len(df_training))
         num_validation = len(df_training) - num_training
     return x, y, num_training, num_validation

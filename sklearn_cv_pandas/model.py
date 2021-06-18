@@ -3,6 +3,8 @@ import logging
 import numpy
 import pandas
 
+from . import preprocessing
+
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +36,10 @@ class Model(object):
         return result_df
 
     def get_x_from_df(self, df):
-        return df[self.feature_columns].values
+        return preprocessing.get_x(df, self.feature_columns)
 
     def get_y_from_df(self, df):
-        return df[self.target_column].values
+        return preprocessing.get_y(df, self.target_column)
 
     def _get_result_for_rg(self, x, index):
         return pandas.DataFrame({

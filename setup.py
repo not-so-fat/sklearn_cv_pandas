@@ -9,13 +9,13 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="sklearn_cv_pandas",
-    version="0.0.7",
+    version="0.0.9",
     author="@not-so-fat",
     description="RandomizedSearchCV/GridSearchCV with pandas.DataFrame interface",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/not-so-fat/sklearn_cv_pandas",
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages(exclude=["test*"]),
     install_requires=requirements,
     classifiers=[
         "Programming Language :: Python :: 3",

@@ -17,4 +17,4 @@ def get_y(df, target_column):
 
 
 def _check_dtype(series):
-    assert types.is_numeric_dtype(series), "{} (dtype: {}) must be one of numeric type".format(seires.name, series.dtype)
+    assert types.is_numeric_dtype(series), "{} (dtype: {}) must be one of numeric type".format(series.name, series.dtype)

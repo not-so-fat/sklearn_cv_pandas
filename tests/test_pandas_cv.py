@@ -1,5 +1,7 @@
 import pytest
 
+import pandas
+from pandas import testing
 from scipy import stats
 from sklearn import (
     linear_model,
@@ -23,7 +25,7 @@ def execute_scenario(model_type, is_cl, with_prep, cv_type, holdout_type):
     df_test = utils.get_input_df(10, with_prep)
     target_column = "target_cl" if is_cl else "target_rg"
     feature_columns = ["column{}".format(i) for i in range(6)]
-    model = cv.fit_cv_pandas(df_training, target_column, feature_columns, n_fold=3) \
+    model = cv.fit_cv_pandas(df_training, target_column, feature_columns, cv=3) \
         if holdout_type == "cv" \
         else cv.fit_holdout_pandas(df_training, target_column, feature_columns, ratio_training=0.8) \
         if holdout_type == "holdout_ratio" \
@@ -55,6 +57,29 @@ def test_grid_tree_cv_cl():
     execute_scenario("tree", True, False, "grid", "cv")
 
 
+def test_fix_random_seed():
+    is_cl = False
+    with_prep = False
+    estimator = _get_estimator("tree", is_cl, with_prep)
+    params = _get_params_random("tree", is_cl, with_prep)
+    metric = "roc_auc" if is_cl else "neg_root_mean_squared_error"
+    target_column = "target_cl" if is_cl else "target_rg"
+    cv1 = RandomizedSearchCV(estimator, params, scoring=metric, random_state=0)
+    cv2 = RandomizedSearchCV(estimator, params, scoring=metric, random_state=0)
+    df_training = utils.get_input_df(100, with_prep)
+    df_test = utils.get_input_df(10, with_prep)
+    feature_columns = ["column{}".format(i) for i in range(6)]
+    model1 = cv1.fit_cv_pandas(df_training, target_column, feature_columns, cv=3)
+    model2 = cv2.fit_cv_pandas(df_training, target_column, feature_columns, cv=3)
+    pred1 = model1.predict(df_test)
+    pred2 = model2.predict(df_test)
+    columns = ["param_max_depth", "mean_test_score", "std_test_score", "mean_train_score", "std_train_score"]
+    testing.assert_frame_equal(
+        pandas.DataFrame(cv1.cv_results_)[columns], pandas.DataFrame(cv2.cv_results_)[columns]
+    )
+    testing.assert_frame_equal(pred1, pred2)
+
+
 def _get_cv(model_type, is_cl, with_prep, cv_type):
     estimator = _get_estimator(model_type, is_cl, with_prep)
     metric = "roc_auc" if is_cl else "neg_root_mean_squared_error"
@@ -68,9 +93,11 @@ def _get_cv(model_type, is_cl, with_prep, cv_type):
 
 def _get_estimator(model_type, is_cl, with_preprocessing):
     if model_type == "linear":
-        ml_estimator = linear_model.LogisticRegression(solver="liblinear") if is_cl else linear_model.Lasso()
+        ml_estimator = linear_model.LogisticRegression(solver="liblinear", random_state=0) \
+            if is_cl else linear_model.Lasso(random_state=0)
     else:
-        ml_estimator = tree.DecisionTreeClassifier() if is_cl else tree.DecisionTreeRegressor()
+        ml_estimator = tree.DecisionTreeClassifier(random_state=0) if is_cl \
+            else tree.DecisionTreeRegressor(random_state=0)
     return _add_preprocessing(ml_estimator) if with_preprocessing else ml_estimator
 
 

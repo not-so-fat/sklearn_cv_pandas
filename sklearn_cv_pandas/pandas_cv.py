@@ -45,44 +45,39 @@ class RandomizedSearchCV(model_selection.RandomizedSearchCV):
         Returns:
             conjurer.ml.Model
         """
-        x, y, num_training, num_validation = _split_for_holdout(
-            df_training, target_column, feature_columns, df_validation, ratio_training)
-        self.cv = model_selection.PredefinedSplit(
-            numpy.array([-1] * num_training + [0] * num_validation))
         logger.warning("start learning with {} hyper parameters".format(self.n_iter))
-        self.fit(x, y, **kwargs)
-        return model.Model(self, feature_columns=feature_columns, target_column=target_column)
+        return _holdout_logic(
+            self, df_training, target_column, feature_columns, df_validation, ratio_training, **kwargs
+        )
 
-    def fit_cv_pandas(self, df, target_column, feature_columns, n_fold, **kwargs):
+    def fit_cv_pandas(self, df, target_column, feature_columns, cv, **kwargs):
         """
         `fit` for pandas DataFrame to perform cross validation
         Args:
             df (pandas.DataFrame): training data set
             target_column (str): column name of prediction target
             feature_columns (list of str): column names of features
-            n_fold (int): The number of fold for CV
+            cv (int or cross-validation generator): The number of fold for CV
             **kwargs: Other keyword arguments for original `fit`
 
         Returns:
             conjurer.ml.Model
         """
-        df = df.sample(len(df))  # shuffle
-        x = preprocessing.get_x(df, feature_columns)
-        y = preprocessing.get_y(df, target_column)
-        self.cv = n_fold
         logger.warning("start learning with {} hyper parameters".format(self.n_iter))
-        self.fit(x, y, **kwargs)
-        return model.Model(self, feature_columns=feature_columns, target_column=target_column)
+        return _cv_logic(
+            self, df, target_column, feature_columns, cv, **kwargs
+        )
 
 
 class GridSearchCV(model_selection.GridSearchCV):
     def __init__(self, estimator, param_grid, scoring=None,
                  n_jobs=None, pre_dispatch='2*n_jobs', cv=None, refit=True,
-                 verbose=10, error_score=numpy.nan, return_train_score=True):
+                 verbose=10, error_score=numpy.nan, return_train_score=True, random_state=None):
         super(GridSearchCV, self).__init__(
             estimator, param_grid, scoring=scoring, n_jobs=n_jobs, pre_dispatch=pre_dispatch,
             cv=cv, refit=refit, verbose=verbose, error_score=error_score, return_train_score=return_train_score
         )
+        self.random_state = random_state
 
     def fit_holdout_pandas(self, df_training, target_column, feature_columns,
                       df_validation=None, ratio_training=None, **kwargs):
@@ -99,37 +94,31 @@ class GridSearchCV(model_selection.GridSearchCV):
         Returns:
             conjurer.ml.Model
         """
-        x, y, num_training, num_validation = _split_for_holdout(
-            df_training, target_column, feature_columns, df_validation, ratio_training)
-        self.cv = model_selection.PredefinedSplit(
-            numpy.array([-1] * num_training + [0] * num_validation))
         logger.warning("start learning with {} parameters".format(_get_num_parameters(self.param_grid)))
-        self.fit(x, y, **kwargs)
-        return model.Model(self, feature_columns=feature_columns, target_column=target_column)
+        return _holdout_logic(
+            self, df_training, target_column, feature_columns, df_validation, ratio_training, **kwargs
+        )
 
-    def fit_cv_pandas(self, df, target_column, feature_columns, n_fold, **kwargs):
+    def fit_cv_pandas(self, df, target_column, feature_columns, cv, **kwargs):
         """
         `fit` for pandas DataFrame to perform cross validation
         Args:
             df (pandas.DataFrame): training data set
             target_column (str): column name of prediction target
             feature_columns (list of str): column names of features
-            n_fold (int): The number of fold for CV
+            cv (int or cross-validation generator): The number of fold for CV
             **kwargs: Other keyword arguments for original `fit`
 
         Returns:
             conjurer.ml.Model
         """
-        df = df.sample(len(df))  # shuffle
-        x = preprocessing.get_x(df, feature_columns)
-        y = preprocessing.get_y(df, target_column)
-        self.cv = n_fold
         logger.warning("start learning with {} parameters".format(_get_num_parameters(self.param_grid)))
-        self.fit(x, y, **kwargs)
-        return model.Model(self, feature_columns=feature_columns, target_column=target_column)
+        return _cv_logic(
+            self, df, target_column, feature_columns, cv, **kwargs
+        )
 
 
-def _split_for_holdout(df_training, target_column, feature_columns, df_validation, ratio_training):
+def _split_for_holdout(df_training, target_column, feature_columns, df_validation, ratio_training, random_state):
     if df_validation is not None:
         x = numpy.concatenate(
             (
@@ -148,7 +137,7 @@ def _split_for_holdout(df_training, target_column, feature_columns, df_validatio
         num_training = len(df_training)
         num_validation = len(df_validation)
     else:
-        shuffled_df = df_training.sample(len(df_training))
+        shuffled_df = df_training.sample(len(df_training), random_state=random_state)
         x = preprocessing.get_x(shuffled_df, feature_columns)
         y = preprocessing.get_y(shuffled_df, target_column)
         num_training = int(ratio_training * len(df_training))
@@ -160,3 +149,29 @@ def _get_num_parameters(param_grid):
     product = lambda list_values: reduce(mul, list_values, 1)
     return len(param_grid) if isinstance(param_grid, list) \
         else product([len(param_grid[elem]) for elem in param_grid.keys()])
+
+
+def _holdout_logic(cv_obj, df_training, target_column, feature_columns, df_validation, ratio_training, **kwargs):
+    x, y, num_training, num_validation = _split_for_holdout(
+        df_training, target_column, feature_columns, df_validation, ratio_training, cv_obj.random_state)
+    cv_obj.cv = model_selection.PredefinedSplit(
+        numpy.array([-1] * num_training + [0] * num_validation))
+    cv_obj.fit(x, y, **kwargs)
+    return model.Model(cv_obj, feature_columns=feature_columns, target_column=target_column)
+
+
+def _cv_logic(cv_obj, df, target_column, feature_columns, cv, **kwargs):
+    x = preprocessing.get_x(df, feature_columns)
+    y = preprocessing.get_y(df, target_column)
+    if isinstance(cv, model_selection.KFold) or isinstance(cv, model_selection.StratifiedKFold) \
+            or isinstance(cv, model_selection.GroupKFold):
+        cv_obj.cv = cv
+    elif isinstance(cv, int):
+        if set(y) == {0, 1}:
+            cv_obj.cv = model_selection.StratifiedKFold(n_splits=cv, shuffle=True, random_state=cv_obj.random_state)
+        else:
+            cv_obj.cv = model_selection.KFold(n_splits=cv, shuffle=True, random_state=cv_obj.random_state)
+    else:
+        raise Exception("parameter `cv`={cv} is not supported, it should be sklearn.**KFold or integer")
+    cv_obj.fit(x, y, **kwargs)
+    return model.Model(cv_obj, feature_columns=feature_columns, target_column=target_column)

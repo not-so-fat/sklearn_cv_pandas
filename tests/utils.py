@@ -21,8 +21,8 @@ def get_input_df(sample_size, with_missing):
         }
     })
     if with_missing:
-        df["column0"].iloc[5] = numpy.nan
-        df["column3"].iloc[5] = numpy.nan
+        df.loc[5, "column0"] = numpy.nan
+        df.loc[5, "column3"] = numpy.nan
     for i in range(3, 6):
         df["column{}".format(i)] = df["column{}".format(i)].astype("Int64")
     return df

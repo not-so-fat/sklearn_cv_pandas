@@ -163,15 +163,12 @@ def _holdout_logic(cv_obj, df_training, target_column, feature_columns, df_valid
 def _cv_logic(cv_obj, df, target_column, feature_columns, cv, **kwargs):
     x = preprocessing.get_x(df, feature_columns)
     y = preprocessing.get_y(df, target_column)
-    if isinstance(cv, model_selection.KFold) or isinstance(cv, model_selection.StratifiedKFold) \
-            or isinstance(cv, model_selection.GroupKFold):
-        cv_obj.cv = cv
-    elif isinstance(cv, int):
+    if isinstance(cv, int):
         if set(y) == {0, 1}:
             cv_obj.cv = model_selection.StratifiedKFold(n_splits=cv, shuffle=True, random_state=cv_obj.random_state)
         else:
             cv_obj.cv = model_selection.KFold(n_splits=cv, shuffle=True, random_state=cv_obj.random_state)
     else:
-        raise Exception("parameter `cv`={cv} is not supported, it should be sklearn.**KFold or integer")
+        cv_obj.cv = cv
     cv_obj.fit(x, y, **kwargs)
     return model.Model(cv_obj, feature_columns=feature_columns, target_column=target_column)
